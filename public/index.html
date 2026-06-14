@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matteo Orders</title>
+<style>
+  :root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E6F9F2;--amber:#F59E0B;--amber-light:#FFF8E1;--red:#DC2626;--red-light:#FEF2F2;--bg:#F9F9F8;--surface:#FFFFFF;--border:#E5E5E3;--border-light:#F0F0EE;--text:#1A1A1A;--text-secondary:#6B6B6B;--text-tertiary:#A0A0A0;--radius:10px;--radius-sm:6px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  #loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;}
+  .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  /* AUTH */
+  #auth-screen{display:none;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;}
+  .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;width:100%;max-width:380px;}
+  .auth-logo{font-size:26px;font-weight:600;margin-bottom:.25rem;}
+  .auth-logo span{color:var(--green);}
+  .auth-sub{font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem;}
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:.9rem;}
+  .field label{font-size:12px;font-weight:500;color:var(--text-secondary);}
+  .field input,.field select,.field textarea{border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;font-size:14px;background:var(--bg);color:var(--text);outline:none;width:100%;}
+  .field input[type=file]{padding:6px 11px;cursor:pointer;}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
+  .btn-primary{width:100%;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);padding:11px;font-size:14px;font-weight:500;cursor:pointer;margin-top:.4rem;}
+  .btn-primary:hover{background:var(--green-dark);}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .auth-error{font-size:12px;color:var(--red);margin-top:.5rem;display:none;}
+  /* APP */
+  #app{display:none;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.25rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+  .logo{font-size:18px;font-weight:600;}
+  .logo span{color:var(--green);}
+  .user-badge{font-size:12px;color:var(--text-secondary);background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:3px 10px;}
+  .topbar-left{display:flex;align-items:center;gap:10px;}
+  .topbar-right{display:flex;align-items:center;gap:8px;}
+  .btn-sm{font-size:12px;border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);white-space:nowrap;}
+  .btn-sm:hover{background:var(--bg);}
+  .btn-sm.green{background:var(--green);border-color:var(--green);color:white;}
+  .btn-sm.green:hover{background:var(--green-dark);}
+  .btn-sm.amber{background:var(--amber-light);border-color:var(--amber);color:#92400E;}
+  .btn-sm.red{background:var(--red-light);border-color:#FECACA;color:var(--red);}
+  .btn-sm:disabled{opacity:.5;cursor:not-allowed;}
+  /* BANNER */
+  .banner{padding:10px 1.25rem;font-size:13px;display:flex;align-items:center;gap:8px;}
+  .banner.open{background:var(--green-light);color:#085041;border-bottom:1px solid #A7E9D2;}
+  .banner.closed{background:#FFF3CD;color:#92400E;border-bottom:1px solid var(--amber);}
+  .banner.admin-mode{background:var(--amber-light);color:#92400E;border-bottom:1px solid var(--amber);}
+  .banner-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .banner.open .banner-dot{background:var(--green);}
+  .banner.closed .banner-dot,.banner.admin-mode .banner-dot{background:var(--amber);}
+  /* NOTIFICATION BELL */
+  .notif-bell-wrap{position:relative;}
+  .notif-bell{position:relative;font-size:15px;padding:6px 10px;}
+  .notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:white;border-radius:999px;font-size:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-weight:600;line-height:1;}
+  .notif-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;width:300px;max-width:90vw;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:100;max-height:360px;overflow-y:auto;}
+  .notif-dropdown.open{display:block;}
+  .notif-dropdown-header{padding:10px 14px;font-size:13px;font-weight:500;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;}
+  .notif-item{padding:10px 14px;border-bottom:1px solid var(--border-light);font-size:12px;cursor:pointer;}
+  .notif-item:last-child{border-bottom:none;}
+  .notif-item:hover{background:var(--bg);}
+  .notif-item .notif-item-title{font-weight:500;margin-bottom:3px;color:var(--text-primary);}
+  .notif-item .notif-item-text{color:var(--text-secondary);line-height:1.4;}
+  .notif-empty{padding:20px 14px;font-size:13px;color:var(--text-secondary);text-align:center;}
+  .emoji-cat-btn{padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:11px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;}
+  .emoji-cat-btn.active{background:var(--green);border-color:var(--green);color:white;}
+  .emoji-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:6px;cursor:pointer;border:none;background:none;}
+  .emoji-btn:hover{background:var(--bg);}
+  #emoji-picker{display:none;}
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);padding:0 1.25rem;overflow-x:auto;}
+  .tab{font-size:13px;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-secondary);white-space:nowrap;}
+  .tab.active{border-bottom-color:var(--green);color:var(--text);font-weight:500;}
+  .tab .badge{background:var(--red);color:white;border-radius:999px;font-size:10px;padding:1px 6px;margin-left:4px;}
+  .main{padding:1.25rem;max-width:1100px;margin:0 auto;}
+  /* CATEGORIES */
+  .search-bar{margin-bottom:1rem;}
+  .search-bar input{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;background:var(--surface);color:var(--text);outline:none;}
+  .search-bar input:focus{border-color:var(--green);}
+  .cat-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;}
+  .cat-btn{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;}
+  .cat-btn.active{background:var(--green);border-color:var(--green);color:white;}
+  /* PRODUCTS */
+  .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;}
+  .product-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem;display:flex;flex-direction:column;gap:6px;}
+  .product-card .emoji{font-size:28px;text-align:center;}
+  .product-card .name{font-size:13px;font-weight:500;line-height:1.3;}
+  .product-card .pdesc{font-size:11px;color:var(--text-secondary);flex:1;}
+  .product-card .footer{display:flex;align-items:center;gap:6px;margin-top:6px;}
+  .qty-input{width:52px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 6px;font-size:13px;text-align:center;background:var(--bg);color:var(--text);outline:none;}
+  .qty-input:focus{border-color:var(--green);}
+  .add-btn{background:var(--green);border:none;border-radius:var(--radius-sm);color:white;height:28px;padding:0 10px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .add-btn:hover{background:var(--green-dark);}
+  .add-btn.locked{background:var(--bg);border:1px solid var(--border);color:var(--text-tertiary);cursor:not-allowed;}
+  .no-products{font-size:13px;color:var(--text-secondary);text-align:center;padding:2rem;grid-column:1/-1;}
+  /* CART */
+  #cart-panel{display:none;}
+  #cart-panel.open{display:block;}
+  .cart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-top:1.25rem;}
+  .cart-title{font-size:15px;font-weight:500;margin-bottom:1rem;}
+  .cart-empty{font-size:13px;color:var(--text-secondary);text-align:center;padding:1rem 0;}
+  .cart-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-light);font-size:13px;gap:8px;}
+  .cart-item:last-of-type{border-bottom:none;}
+  .cart-item-name{flex:1;}
+  .qty-ctrl{display:flex;align-items:center;gap:5px;}
+  .qty-btn{background:var(--bg);border:1px solid var(--border);border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;}
+  .cart-qty-input{width:40px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;text-align:center;background:var(--bg);}
+  .checkout-btn{width:100%;margin-top:1rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);padding:10px;font-size:14px;font-weight:500;cursor:pointer;}
+  .checkout-btn:hover{background:var(--green-dark);}
+  .checkout-btn:disabled{opacity:.6;cursor:not-allowed;}
+  .order-success{background:var(--green-light);border:1px solid #A7E9D2;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#085041;margin-top:1rem;display:none;}
+  /* SECTION */
+  .section-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
+  .section-toolbar h2{font-size:16px;font-weight:500;flex:1;}
+  .empty-state{font-size:13px;color:var(--text-secondary);padding:2rem;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  /* ORDER CARDS */
+  .order-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+  .order-card.pending{border-color:var(--amber);}
+  .order-card.accepted{border-color:#86EFAC;}
+  .order-card.refused{border-color:#FECACA;opacity:.75;}
+  .order-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;}
+  .order-card-header input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--green);flex-shrink:0;}
+  .order-card-user{font-size:14px;font-weight:500;flex:1;}
+  .order-card-meta{font-size:12px;color:var(--text-secondary);}
+  .order-status{font-size:11px;border-radius:999px;padding:2px 8px;font-weight:500;}
+  .status-pending{background:#FFF3CD;color:#92400E;}
+  .status-accepted{background:#F0FDF4;color:#166534;}
+  .status-refused{background:var(--red-light);color:var(--red);}
+  .order-card-body{display:none;padding:12px 14px;border-top:1px solid var(--border-light);}
+  .order-card-body.open{display:block;}
+  .order-item-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border-light);}
+  .order-item-row:last-child{border-bottom:none;}
+  .order-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);}
+  .admin-qty-input{width:45px;border:1px solid var(--border);border-radius:4px;padding:3px 5px;font-size:12px;text-align:center;background:var(--bg);}
+  .add-item-row{display:flex;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);}
+  .add-item-select{flex:1;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--text);min-width:0;}
+  /* USERS TABLE */
+  .user-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .user-row{display:grid;grid-template-columns:1fr 1fr auto auto;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border-light);font-size:13px;gap:10px;}
+  .user-row:last-child{border-bottom:none;}
+  .user-row.header{font-weight:500;font-size:12px;color:var(--text-secondary);background:var(--bg);}
+  .btn-danger{font-size:12px;color:var(--red);background:none;border:none;cursor:pointer;padding:2px 6px;}
+  .btn-danger:hover{background:var(--red-light);border-radius:4px;}
+  /* PRODUCTS TABLE */
+  .prod-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .prod-row{display:grid;grid-template-columns:36px 1fr 80px 90px 100px auto;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border-light);font-size:13px;gap:10px;}
+  .prod-row:last-child{border-bottom:none;}
+  .prod-row.header{font-weight:500;font-size:12px;color:var(--text-secondary);background:var(--bg);}
+  .prod-actions{display:flex;gap:5px;}
+  .inactive-row{opacity:.45;}
+  .toggle-btn{font-size:11px;padding:3px 8px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--text-secondary);}
+  .toggle-btn.on{background:#F0FDF4;border-color:#86EFAC;color:#166534;}
+  /* HISTORY */
+  .history-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+  .history-header{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;}
+  .history-date{font-size:13px;font-weight:500;flex:1;}
+  .history-body{display:none;padding:10px 14px;border-top:1px solid var(--border-light);}
+  .history-body.open{display:block;}
+  .history-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border-light);}
+  .history-item:last-child{border-bottom:none;}
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:320px;display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow-y:auto;}
+  .modal h3{font-size:15px;font-weight:500;}
+  .modal-btns{display:flex;gap:8px;}
+  .modal-btns button{flex:1;padding:9px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--text);}
+  .modal-btns button.primary{background:var(--green);border-color:var(--green);color:white;}
+  .modal-btns button.danger{background:var(--red);border-color:var(--red);color:white;}
+  .modal-error{font-size:12px;color:var(--red);display:none;}
+  @media(max-width:480px){.products{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}.topbar{padding:0 1rem;}.main{padding:1rem;}.prod-row{grid-template-columns:28px 1fr 70px 70px auto;}}
+</style>
+</head>
+<body>
+<div id="loading-screen"><div class="spinner"></div><div style="font-size:13px;color:#6B6B6B">Loading Matteo Orders...</div></div>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🍃 Matteo <span>Orders</span></div>
+    <div class="auth-sub">Sign in to place your order</div>
+    <div class="field"><label>Username</label><input type="text" id="login-user" placeholder="your username" autocomplete="off"/></div>
+    <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="new-password"/></div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="auth-error" id="auth-error">Incorrect username or password.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">🍃 Matteo <span>Orders</span></div>
+      <div class="user-badge" id="user-badge"></div>
+    </div>
+    <div class="topbar-right">
+      <div class="notif-bell-wrap" id="notif-bell-wrap" style="display:none;">
+        <button class="btn-sm notif-bell" onclick="toggleNotifDropdown()">🔔<span class="notif-badge" id="notif-badge" style="display:none;">0</span></button>
+        <div class="notif-dropdown" id="notif-dropdown"></div>
+      </div>
+      <!-- ADMIN MENU -->
+      <div class="notif-bell-wrap" id="admin-menu-wrap" style="display:none;">
+        <button class="btn-sm" onclick="toggleAdminMenu()">⚙️ Menu</button>
+        <div class="notif-dropdown" id="admin-menu-dropdown">
+          <div class="notif-dropdown-header">Admin</div>
+          <div class="notif-item" onclick="goAdminMenu('users')">
+            <div class="notif-item-title">👥 Users</div>
+            <div class="notif-item-text">Manage client accounts</div>
+          </div>
+          <div class="notif-item" onclick="goAdminMenu('products')">
+            <div class="notif-item-title">📦 Products</div>
+            <div class="notif-item-text">Edit catalogue</div>
+          </div>
+          <div class="notif-item" onclick="goAdminMenu('trash')">
+            <div class="notif-item-title">🗑 Trash <span class="notif-badge" id="trash-badge" style="display:inline-flex;position:static;margin-left:6px;">0</span></div>
+            <div class="notif-item-text">Deleted orders</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-sm" id="cart-toggle-btn" onclick="toggleCart()">🛒 Cart (<span id="cart-count">0</span>)</button>
+      <button class="btn-sm" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <div class="banner" id="banner"><div class="banner-dot"></div><span id="banner-msg"></span></div>
+
+  <!-- CLIENT TABS -->
+  <div class="tabs" id="client-tabs" style="display:none;">
+    <div class="tab active" onclick="showClientTab('order',this)">Order</div>
+    <div class="tab" onclick="showClientTab('history',this)">My Orders</div>
+  </div>
+  <!-- ADMIN TABS (main tabs only) -->
+  <div class="tabs" id="admin-tabs" style="display:none;">
+    <div class="tab active" onclick="showAdminTab('orders',this)">🆕 New Orders <span class="badge" id="pending-badge" style="display:none">0</span></div>
+    <div class="tab" onclick="showAdminTab('completed',this)">✅ Completed</div>
+  </div>
+
+  <div class="main">
+    <!-- CLIENT: ORDER -->
+    <div id="tab-order">
+      <div class="search-bar">
+        <input type="text" id="product-search" placeholder="🔍 Search products..." oninput="renderProducts()"/>
+      </div>
+      <div class="cat-row" id="cat-row"></div>
+      <div class="products" id="products"></div>
+      <div id="cart-panel">
+        <div class="cart-box">
+          <div class="cart-title">🛒 Your cart</div>
+          <div id="cart-items"></div>
+          <button class="checkout-btn" id="submit-btn" onclick="submitOrder()">Submit order ↗</button>
+          <div class="order-success" id="order-success">✅ Order submitted successfully!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT: HISTORY -->
+    <div id="tab-history" style="display:none;">
+      <div class="section-toolbar"><h2>My Orders</h2><button class="btn-sm" onclick="loadClientHistory()">↻ Refresh</button></div>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- ADMIN: ORDERS (New/Active) -->
+    <div id="tab-orders" style="display:none;">
+      <div class="section-toolbar">
+        <h2>New Orders</h2>
+        <button class="btn-sm" onclick="loadAdminOrders()">↻ Refresh</button>
+        <button class="btn-sm" onclick="mergeSelectedOrders()" title="Select 2+ orders from the same client to merge">🔀 Merge</button>
+        <button class="btn-sm red" onclick="promptDeleteSelected()">🗑 Delete</button>
+        <button class="btn-sm amber" onclick="exportToGoogleSheets()">📊 Google Sheets</button>
+        <button class="btn-sm amber" onclick="exportExcel()">⬇ Excel</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <button class="btn-sm" id="filter-all" onclick="filterOrders('all')" style="font-weight:500">All</button>
+        <button class="btn-sm" id="filter-pending" onclick="filterOrders('pending')">⏳ Pending</button>
+        <button class="btn-sm" id="filter-accepted" onclick="filterOrders('accepted')">✅ Accepted</button>
+        <button class="btn-sm" id="filter-refused" onclick="filterOrders('refused')">❌ Refused</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);margin-left:auto;cursor:pointer;">
+          <input type="checkbox" id="select-all-orders" onchange="toggleSelectAllOrders(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--green);"/>
+          Select all
+        </label>
+      </div>
+      <div id="orders-list"></div>
+    </div>
+
+    <!-- ADMIN: COMPLETED ORDERS -->
+    <div id="tab-completed" style="display:none;">
+      <div class="section-toolbar">
+        <h2>Completed Orders</h2>
+        <button class="btn-sm" onclick="loadCompletedOrders()">↻ Refresh</button>
+        <button class="btn-sm amber" onclick="exportCompletedExcel()">⬇ Export Excel</button>
+        <button class="btn-sm red" onclick="promptDeleteCompleted()">🗑 Delete selected</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);cursor:pointer;">
+          <input type="checkbox" id="select-all-completed" onchange="toggleSelectAllCompleted(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--green);"/>
+          Select all
+        </label>
+      </div>
+      <div id="completed-list"></div>
+    </div>
+
+    <!-- ADMIN: USERS -->
+    <div id="tab-users" style="display:none;">
+      <div class="section-toolbar"><h2>Users</h2><button class="btn-sm green" onclick="openAddUser()">+ Add user</button></div>
+      <div class="user-table" id="user-table"></div>
+    </div>
+
+    <!-- ADMIN: PRODUCTS -->
+    <div id="tab-products" style="display:none;">
+      <div class="section-toolbar"><h2>Products</h2><button class="btn-sm green" onclick="openAddProduct()">+ Add product</button></div>
+      <div class="cat-row" id="admin-cat-row"></div>
+      <div class="prod-table" id="prod-table"></div>
+    </div>
+
+    <!-- ADMIN: TRASH -->
+    <div id="tab-trash" style="display:none;">
+      <div class="section-toolbar">
+        <h2>🗑 Trash</h2>
+        <button class="btn-sm" onclick="loadTrash()">↻ Refresh</button>
+        <button class="btn-sm green" onclick="restoreSelectedOrders()">↩ Restore selected</button>
+        <button class="btn-sm red" onclick="permanentlyDeleteSelected()">✕ Delete permanently</button>
+      </div>
+      <div id="trash-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="add-user-modal">
+  <div class="modal">
+    <h3>Add new user</h3>
+    <div class="field"><label>Username</label><input type="text" id="new-username" placeholder="e.g. battersea"/></div>
+    <div class="field"><label>Password</label><input type="text" id="new-password" placeholder="e.g. pass123"/></div>
+    <div class="modal-error" id="add-user-error"></div>
+    <div class="modal-btns"><button onclick="closeModal('add-user-modal')">Cancel</button><button class="primary" onclick="addUser()">Add user</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-user-modal">
+  <div class="modal">
+    <h3>Change password</h3>
+    <div style="font-size:13px;color:var(--text-secondary)" id="edit-user-label"></div>
+    <div class="field"><label>New password</label><input type="text" id="edit-password" placeholder="New password"/></div>
+    <div class="modal-error" id="edit-user-error"></div>
+    <div class="modal-btns"><button onclick="closeModal('edit-user-modal')">Cancel</button><button class="primary" onclick="saveUserPassword()">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-product-modal">
+  <div class="modal">
+    <h3 id="product-modal-title">Add product</h3>
+    <!-- Image preview -->
+    <div id="prod-image-preview" style="text-align:center;margin-bottom:4px;display:none;">
+      <img id="prod-img-preview-el" style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);"/>
+      <div style="margin-top:4px;"><button class="btn-sm red" onclick="clearProductImage()" style="font-size:11px;">✕ Remove image</button></div>
+    </div>
+    <!-- Emoji OR image toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <button class="btn-sm active" id="use-emoji-btn" onclick="switchToEmoji()" style="flex:1;border-color:var(--green);background:var(--green-light);color:var(--green-dark);">😀 Emoji</button>
+      <button class="btn-sm" id="use-image-btn" onclick="switchToImage()" style="flex:1;">📷 Photo</button>
+    </div>
+    <div id="emoji-field" class="field">
+      <label>Emoji</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div id="emoji-preview" style="font-size:32px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;background:var(--bg);" onclick="toggleEmojiPicker()">📦</div>
+        <input type="text" id="prod-emoji" placeholder="📦" maxlength="4" style="flex:1;" oninput="document.getElementById('emoji-preview').textContent=this.value||'📦'"/>
+        <button class="btn-sm" onclick="toggleEmojiPicker()" type="button">😀 Pick</button>
+      </div>
+      <!-- EMOJI PICKER PANEL -->
+      <div id="emoji-picker" style="display:none;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;max-height:320px;display:none;flex-direction:column;">
+        <div style="padding:8px;">
+          <input type="text" id="emoji-search" placeholder="🔍 Search emojis..." oninput="filterEmojis(this.value)" style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;background:var(--bg);outline:none;"/>
+        </div>
+        <div id="emoji-categories" style="display:flex;gap:4px;padding:0 8px 6px;flex-wrap:wrap;"></div>
+        <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:2px;padding:4px 8px 8px;overflow-y:auto;max-height:220px;"></div>
+      </div>
+    </div>
+    <div id="image-field" class="field" style="display:none;">
+      <label>Upload photo</label>
+      <input type="file" id="prod-image-file" accept="image/*" onchange="previewProductImage(this)"/>
+    </div>
+    <div class="field"><label>Name</label><input type="text" id="prod-name" placeholder="Product name"/></div>
+    <div class="field"><label>Description / Unit</label><input type="text" id="prod-description" placeholder="e.g. 1 kg, Unit, Box..."/></div>
+    <div class="field"><label>Category</label>
+      <select id="prod-cat">
+        <option value="sauces">Sauces</option><option value="oven">Oven</option><option value="desserts">Desserts</option>
+        <option value="small-packs">Small Packs</option><option value="cheeses">Cheeses</option><option value="cured-meat">Cured Meat</option>
+        <option value="vegg">Vegg</option><option value="frozen">Frozen</option><option value="dry">Dry</option>
+        <option value="pastas">Pastas</option><option value="drinks">Drinks</option><option value="oils">Oils</option>
+        <option value="packaging">Packaging</option><option value="chemical">Chemical</option><option value="office">Office</option><option value="backup">Backup</option>
+      </select>
+    </div>
+    <div class="modal-error" id="add-product-error"></div>
+    <div class="modal-btns"><button onclick="closeModal('add-product-modal')">Cancel</button><button class="primary" onclick="saveProduct()">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="clear-confirm-modal">
+  <div class="modal">
+    <h3 id="delete-modal-title">🗑 Delete orders</h3>
+    <div style="font-size:13px;color:var(--text-secondary)" id="delete-modal-desc"></div>
+    <div class="field"><label>Admin password</label><input type="password" id="clear-confirm-pass" placeholder="••••••••" autocomplete="new-password"/></div>
+    <div class="modal-error" id="clear-confirm-error"></div>
+    <div class="modal-btns"><button onclick="closeModal('clear-confirm-modal')">Cancel</button><button class="danger" onclick="confirmDeleteSelected()">Delete</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="refuse-modal">
+  <div class="modal">
+    <h3>❌ Refuse order</h3>
+    <div style="font-size:13px;color:var(--text-secondary)">Optionally add a reason for the client.</div>
+    <div class="field"><label>Reason (optional)</label><textarea id="refuse-reason" rows="3" placeholder="e.g. Some items unavailable..."></textarea></div>
+    <div class="modal-btns"><button onclick="closeModal('refuse-modal')">Cancel</button><button class="danger" onclick="confirmRefuse()">Refuse order</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="accept-modal">
+  <div class="modal">
+    <h3>✅ Accept order</h3>
+    <div style="font-size:13px;color:var(--text-secondary)">Optionally add a message for the client.</div>
+    <div class="field"><label>Message (optional)</label><textarea id="accept-message" rows="3" placeholder="e.g. Order confirmed, will be delivered tomorrow morning..."></textarea></div>
+    <div class="modal-btns"><button onclick="closeModal('accept-modal')">Cancel</button><button class="primary" onclick="confirmAccept()">Accept order</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const SUPABASE_URL='https://kiqkosvwgnbugzqtwrem.supabase.co';
+const SUPABASE_KEY='sb_publishable_HPLBPyISv18qWvIX-1MMjQ_-hFfFhdR';
+const ADMIN_USERNAME='admin';
+const ADMIN_PASS='matteo2024';
+const EMAIL_DOMAIN='@matteo.local';
+const WORKER_URL='https://matteo-admin.jefersonmottauk.workers.dev';
+const WORKER_SECRET='mt-9f8x2-secret-2026';
+const CUT_HOUR=12,CUT_DAYS=[1,4];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const CATEGORIES=[
+  {id:'all',label:'All'},{id:'sauces',label:'Sauces'},{id:'oven',label:'Oven'},
+  {id:'desserts',label:'Desserts'},{id:'small-packs',label:'Small Packs'},{id:'cheeses',label:'Cheeses'},
+  {id:'cured-meat',label:'Cured Meat'},{id:'vegg',label:'Vegg'},{id:'frozen',label:'Frozen'},
+  {id:'dry',label:'Dry'},{id:'pastas',label:'Pastas'},{id:'drinks',label:'Drinks'},
+  {id:'oils',label:'Oils'},{id:'packaging',label:'Packaging'},{id:'chemical',label:'Chemical'},
+  {id:'office',label:'Office'},{id:'backup',label:'Backup'},
+];
+
+// ── SUPABASE CLIENT (handles auth session automatically) ──
+const sbClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+// ── SUPABASE REST HELPERS (uses logged-in user's access token) ──
+async function authHeaders(){
+  const {data}=await sbClient.auth.getSession();
+  const token=data?.session?.access_token||SUPABASE_KEY;
+  return {'Authorization':`Bearer ${token}`,'apikey':SUPABASE_KEY,'Content-Type':'application/json'};
+}
+async function sbGet(t,q=''){const H=await authHeaders();const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?${q}&apikey=${SUPABASE_KEY}`,{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPost(t,b){const H=await authHeaders();const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPatch(t,q,b){const H=await authHeaders();const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?${q}`,{method:'PATCH',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbDelete(t,q){const H=await authHeaders();const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());}
+
+// ── STATE ──
+let currentUser=null,isAdmin=false,currentUserId=null,cart={},activeCat='all',adminProdCat='all';
+let allProducts=[],allOrdersCache=[],orderFilter='all',editingProductId=null,refusingOrderId=null,editingUserId=null,editingUsername=null;
+
+// ── CLOUDFLARE WORKER CALL (user management) ──
+async function workerCall(path,body){
+  const r=await fetch(WORKER_URL+path,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-secret':WORKER_SECRET},
+    body:JSON.stringify(body)
+  });
+  return r.json();
+}
+
+// ── CUT TIME ──
+function isCutDay(){return CUT_DAYS.includes(new Date().getDay());}
+function isOrderOpen(){return !isCutDay()||new Date().getHours()<CUT_HOUR;}
+function canAdd(){return isOrderOpen()||isAdmin;}
+function timeLeft(){const now=new Date(),t=(CUT_HOUR*60)-(now.getHours()*60+now.getMinutes()),h=Math.floor(t/60),m=t%60;return h>0?`${h}h ${m}min`:`${m} min`;}
+function updateBanner(){
+  const b=document.getElementById('banner'),m=document.getElementById('banner-msg');
+  if(isAdmin&&!isOrderOpen()){b.className='banner admin-mode';m.textContent='🔑 Admin mode — orders closed for clients.';}
+  else if(isOrderOpen()){b.className='banner open';m.textContent=isCutDay()?`✅ Orders open — cut-off 12:00 PM (${DAYS[new Date().getDay()]}). ${timeLeft()} remaining.`:`✅ Orders open — no cut-off today (${DAYS[new Date().getDay()]}). Cut-off Mon & Thu only.`;}
+  else{b.className='banner closed';m.textContent='🚫 Orders closed — cut-off was 12:00 PM. You can edit existing orders. New orders reopen tomorrow.';}
+}
+
+// ── AUTH ──
+async function init(){
+  // Restore existing session if present
+  try{
+    const {data}=await sbClient.auth.getSession();
+    if(data?.session){
+      const email=data.session.user.email||'';
+      const u=email.replace(EMAIL_DOMAIN,'').toLowerCase();
+      currentUser=u;
+      currentUserId=data.session.user.id;
+      isAdmin=(u===ADMIN_USERNAME);
+      try{
+        await launch();
+        return;
+      }catch(launchErr){
+        // Session might be stale/invalid - sign out and show login
+        try{await sbClient.auth.signOut();}catch(e){}
+        currentUser=null;currentUserId=null;isAdmin=false;
+      }
+    }
+  }catch(e){/* fall through to login */}
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
+async function doLogin(){
+  const u=document.getElementById('login-user').value.trim().toLowerCase();
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('auth-error'),btn=document.getElementById('login-btn');
+  err.style.display='none';btn.disabled=true;btn.textContent='Signing in...';
+  try{
+    const email=u+EMAIL_DOMAIN;
+    const {data,error}=await sbClient.auth.signInWithPassword({email,password:p});
+    if(error||!data.session){
+      err.textContent='Incorrect username or password.';err.style.display='block';
+    } else {
+      currentUser=u;
+      currentUserId=data.user.id;
+      isAdmin=(u===ADMIN_USERNAME);
+      await launch();
+    }
+  }catch(e){err.textContent='Connection error. Please try again.';err.style.display='block';}
+  btn.disabled=false;btn.textContent='Sign in';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();});
+async function doLogout(){
+  await sbClient.auth.signOut();
+  try{
+    // Extra safety: clear any Supabase-related localStorage keys
+    Object.keys(localStorage).forEach(k=>{ if(k.startsWith('sb-')) localStorage.removeItem(k); });
+  }catch(e){/* ignore */}
+  // Force a full reload to guarantee no stale session/state remains
+  window.location.reload();
+}
+async function launch(){
+  try{allProducts=await sbGet('products','active=eq.true&order=cat.asc,name.asc');}catch(e){allProducts=[];}
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-badge').textContent=isAdmin?'👑 admin':currentUser;
+  document.getElementById('cart-toggle-btn').style.display=isAdmin?'none':'';
+  document.getElementById('admin-menu-wrap').style.display=isAdmin?'inline-block':'none';
+  document.getElementById('client-tabs').style.display=isAdmin?'none':'flex';
+  document.getElementById('admin-tabs').style.display=isAdmin?'flex':'none';
+  document.getElementById('tab-order').style.display=isAdmin?'none':'block';
+  if(isAdmin){
+    showAdminTab('orders');
+    await checkAdminPendingNotifications();
+    loadTrashBadge();
+    
+    setInterval(checkAdminPendingNotifications,30000);
+  } else {
+    await loadExistingOrderIntoCart();
+    renderCats();renderProducts();renderCart();
+    await checkUnreadNotifications();
+  }
+  updateBanner();
+}
+
+// ── ADMIN NOTIFICATIONS (new pending orders) ──
+let adminNotifItems=[];
+async function checkAdminPendingNotifications(){
+  document.getElementById('notif-bell-wrap').style.display='inline-block';
+  try{
+    const rows=await sbGet('orders_history',`status=eq.pending&order=created_at.desc`);
+    adminNotifItems=rows;
+    renderAdminNotifBell();
+    // Keep pending badge on Orders tab in sync too
+    const tabBadge=document.getElementById('pending-badge');
+    if(tabBadge){
+      if(rows.length>0){tabBadge.style.display='inline';tabBadge.textContent=rows.length;}
+      else{tabBadge.style.display='none';}
+    }
+  }catch(e){adminNotifItems=[];renderAdminNotifBell();}
+}
+function renderAdminNotifBell(){
+  const badge=document.getElementById('notif-badge');
+  if(adminNotifItems.length>0){
+    badge.style.display='flex';
+    badge.textContent=adminNotifItems.length;
+  }else{
+    badge.style.display='none';
+  }
+  const dd=document.getElementById('notif-dropdown');
+  if(!adminNotifItems.length){
+    dd.innerHTML=`<div class="notif-dropdown-header">New Orders</div><div class="notif-empty">No pending orders.</div>`;
+    return;
+  }
+  dd.innerHTML=`<div class="notif-dropdown-header">New Orders (${adminNotifItems.length})</div>`+
+    adminNotifItems.map(o=>{
+      const count=Object.values(o.items).reduce((a,b)=>a+b,0);
+      return `<div class="notif-item" onclick="goToAdminOrder('${o.id}')">
+        <div class="notif-item-title">⏳ ${o.username}</div>
+        <div class="notif-item-text">${o.timestamp} — ${count} items</div>
+      </div>`;
+    }).join('');
+}
+async function goToAdminOrder(orderId){
+  document.getElementById('notif-dropdown').classList.remove('open');
+  // Switch to Orders tab, pending filter, and open that order
+  showAdminTab('orders',document.querySelectorAll('#admin-tabs .tab')[0]);
+  filterOrders('pending');
+  await loadAdminOrders();
+  setTimeout(()=>{
+    const body=document.getElementById('ob-'+orderId);
+    if(body){
+      body.classList.add('open');
+      body.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },300);
+}
+
+// ── CLIENT NOTIFICATIONS (admin accept/refuse messages) ──
+let notifItems=[];
+async function checkUnreadNotifications(){
+  document.getElementById('notif-bell-wrap').style.display='inline-block';
+  try{
+    const rows=await sbGet('orders_history',`username=eq.${encodeURIComponent(currentUser)}&message_read=eq.false&order=created_at.desc`);
+    notifItems=rows.filter(r=>r.admin_message);
+    renderNotifBell();
+  }catch(e){notifItems=[];renderNotifBell();}
+}
+function renderNotifBell(){
+  const badge=document.getElementById('notif-badge');
+  if(notifItems.length>0){
+    badge.style.display='flex';
+    badge.textContent=notifItems.length;
+  }else{
+    badge.style.display='none';
+  }
+  const dd=document.getElementById('notif-dropdown');
+  if(!notifItems.length){
+    dd.innerHTML=`<div class="notif-dropdown-header">Notifications</div><div class="notif-empty">No new notifications.</div>`;
+    return;
+  }
+  dd.innerHTML=`<div class="notif-dropdown-header">Notifications<button class="btn-sm" onclick="markAllNotifsRead()" style="font-size:11px;padding:3px 8px;">Mark all read</button></div>`+
+    notifItems.map(o=>{
+      const icon=o.status==='accepted'?'✅':o.status==='refused'?'❌':'💬';
+      const label=o.status==='accepted'?'Order accepted':o.status==='refused'?'Order refused':'Message';
+      return `<div class="notif-item" onclick="markNotifRead('${o.id}')">
+        <div class="notif-item-title">${icon} ${label}</div>
+        <div class="notif-item-text">${o.admin_message}</div>
+      </div>`;
+    }).join('');
+}
+function toggleNotifDropdown(){
+  document.getElementById('notif-dropdown').classList.toggle('open');
+  document.getElementById('admin-menu-dropdown')?.classList.remove('open');
+}
+function toggleAdminMenu(){
+  document.getElementById('admin-menu-dropdown').classList.toggle('open');
+  document.getElementById('notif-dropdown')?.classList.remove('open');
+}
+function goAdminMenu(tab){
+  document.getElementById('admin-menu-dropdown').classList.remove('open');
+  // Find the right tab element and activate
+  const tabEls=document.querySelectorAll('#admin-tabs .tab');
+  showAdminTab(tab, tabEls[0]); // pass dummy, showAdminTab will handle highlight
+  // Manually highlight secondary tabs (not in main tab bar)
+  document.querySelectorAll('#admin-tabs .tab').forEach(x=>x.classList.remove('active'));
+}
+async function markNotifRead(id){
+  try{await sbPatch('orders_history',`id=eq.${id}`,{message_read:true});}catch(e){/* ignore */}
+  notifItems=notifItems.filter(o=>o.id!==id);
+  renderNotifBell();
+}
+async function markAllNotifsRead(){
+  try{
+    for(const o of notifItems){
+      await sbPatch('orders_history',`id=eq.${o.id}`,{message_read:true});
+    }
+  }catch(e){/* ignore */}
+  notifItems=[];
+  renderNotifBell();
+  document.getElementById('notif-dropdown').classList.remove('open');
+}
+// Close dropdowns when clicking outside
+document.addEventListener('click',function(e){
+  const notifWrap=document.getElementById('notif-bell-wrap');
+  if(notifWrap && !notifWrap.contains(e.target)){
+    document.getElementById('notif-dropdown')?.classList.remove('open');
+  }
+  const adminWrap=document.getElementById('admin-menu-wrap');
+  if(adminWrap && !adminWrap.contains(e.target)){
+    document.getElementById('admin-menu-dropdown')?.classList.remove('open');
+  }
+});
+
+// ── LOAD EXISTING ORDER INTO CART (for editing) ──
+async function loadExistingOrderIntoCart(){
+  cart={}; // always start clean for this user/session
+  try{
+    const rows=await sbGet('orders_history',`username=eq.${encodeURIComponent(currentUser)}&status=eq.pending&order=created_at.desc&limit=1`);
+    if(rows.length){
+      cart={...rows[0].items};
+      if(Object.keys(cart).length>0){
+        document.getElementById('cart-panel').classList.add('open');
+      }
+    }
+  }catch(e){cart={};}
+}
+
+// ── CATALOGUE ──
+function renderCats(){
+  document.getElementById('cat-row').innerHTML=CATEGORIES.map(c=>
+    `<button class="cat-btn${activeCat===c.id?' active':''}" onclick="filterCat('${c.id}')">${c.label}</button>`
+  ).join('');
+}
+function filterCat(cat){activeCat=cat;renderCats();renderProducts();}
+function renderProducts(){
+  const locked=!canAdd();
+  let list=activeCat==='all'?allProducts:allProducts.filter(p=>p.cat===activeCat);
+  // Hide out-of-stock items from clients
+  if(!isAdmin) list=list.filter(p=>!p.out_of_stock);
+  // Filter by search text
+  const searchEl=document.getElementById('product-search');
+  const search=(searchEl?searchEl.value:'').trim().toLowerCase();
+  if(search){
+    list=list.filter(p=>p.name.toLowerCase().includes(search)||(p.description||'').toLowerCase().includes(search));
+  }
+  const el=document.getElementById('products');
+  if(!list.length){el.innerHTML=`<div class="no-products">${search?'No products match "'+search+'".':'No products in this category.'}</div>`;return;}
+  el.innerHTML=list.map(p=>`
+    <div class="product-card">
+      <div class="emoji">${p.image_url?`<img src="${p.image_url}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;display:block;margin:0 auto;" onerror="this.style.display='none';this.nextSibling.style.display='block'"/><span style="display:none">${p.emoji}</span>`:p.emoji}</div>
+      <div class="name">${p.name}</div>
+      ${p.description?`<div class="pdesc">${p.description}</div>`:''}
+      <div class="footer">
+        ${locked?`<button class="add-btn locked" disabled>🔒 Closed</button>`
+        :`<input class="qty-input" type="number" id="qty-${p.id}" min="1" max="999" placeholder="Qty"
+           onchange="if(this.value&&parseInt(this.value)>0){addToCart(${p.id});}" />
+          <button class="add-btn" onclick="addToCart(${p.id})">+</button>`}
+      </div>
+    </div>`).join('');
+}
+
+// ── CART ──
+function addToCart(id){
+  if(!canAdd())return;
+  const inp=document.getElementById('qty-'+id);
+  const qty=inp?parseInt(inp.value)||1:1;
+  if(qty<1||qty>999)return;
+  const wasEmpty=Object.keys(cart).length===0;
+  cart[id]=(cart[id]||0)+qty;
+  // Keep qty visible after adding
+  renderCart();
+  document.getElementById('order-success').style.display='none';
+  // Auto-open cart on first item added
+  if(wasEmpty){
+    document.getElementById('cart-panel').classList.add('open');
+  }
+}
+function setCartQty(id,val){const q=parseInt(val)||0;if(q<=0)delete cart[id];else cart[id]=q;renderCart();}
+function removeFromCart(id){delete cart[id];renderCart();}
+function toggleCart(){document.getElementById('cart-panel').classList.toggle('open');}
+function renderCart(){
+  const count=Object.values(cart).reduce((a,b)=>a+b,0);
+  document.getElementById('cart-count').textContent=count;
+  const el=document.getElementById('cart-items');
+  if(!count){el.innerHTML='<div class="cart-empty">Your cart is empty.</div>';return;}
+  el.innerHTML=Object.entries(cart).map(([id,q])=>{
+    const p=allProducts.find(x=>x.id==id);
+    const name=p?`${p.emoji} ${p.name}${p.description?` <span style="color:var(--text-tertiary);font-size:11px">(${p.description})</span>`:''}`:`#${id}`;
+    return `<div class="cart-item">
+      <span class="cart-item-name">${name}</span>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="setCartQty(${id},${q-1})">−</button>
+        <input class="cart-qty-input" type="number" value="${q}" min="1" max="999" onchange="setCartQty(${id},this.value)"/>
+        <button class="qty-btn" onclick="setCartQty(${id},${q+1})">+</button>
+        <button class="qty-btn" style="color:var(--red)" onclick="removeFromCart(${id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function submitOrder(){
+  const count=Object.values(cart).reduce((a,b)=>a+b,0);
+  if(!count){alert('Your cart is empty.');return;}
+
+  // Build order summary for review
+  const itemList=Object.entries(cart).map(([id,q])=>{
+    const p=allProducts.find(x=>x.id==id);
+    return `• ${p?p.emoji:''} ${p?p.name:'#'+id}${p&&p.description?' ('+p.description+')':''}: ${q}`;
+  }).join('\n');
+
+  const productCount=Object.keys(cart).length;
+
+  const confirmed=confirm(
+    `⚠️ Please review your order before submitting:\n\n${itemList}\n\n` +
+    `Total: ${productCount} product${productCount>1?'s':''}\n\n` +
+    `Please make sure all items and quantities are correct.\n\nClick OK to confirm and submit.`
+  );
+  if(!confirmed)return;
+
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='Submitting...';
+  try{
+    const now=new Date(),ts=now.toLocaleDateString('en-GB')+' '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const existing=await sbGet('orders_history',`username=eq.${encodeURIComponent(currentUser)}&status=eq.pending`);
+    if(existing.length>0){
+      await sbPatch('orders_history',`id=eq.${existing[0].id}`,{items:cart,timestamp:ts});
+    } else {
+      await sbPost('orders_history',{username:currentUser,user_id:currentUserId,items:cart,timestamp:ts,status:'pending'});
+    }
+    document.getElementById('order-success').style.display='block';
+    document.getElementById('order-success').textContent='✅ Order submitted! You can still edit it before the cut-off.';
+    setTimeout(()=>document.getElementById('order-success').style.display='none',5000);
+    cart={};
+    renderCart();
+    document.getElementById('cart-panel').classList.remove('open');
+  }catch(e){alert('Error submitting order. Please try again.');}
+  btn.disabled=false;btn.textContent='Submit order ↗';
+}
+
+// ── CLIENT: HISTORY ──
+function showClientTab(t,el){
+  ['order','history'].forEach(x=>document.getElementById('tab-'+x).style.display=x===t?'block':'none');
+  document.querySelectorAll('#client-tabs .tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  if(t==='history')loadClientHistory();
+}
+async function loadClientHistory(){
+  const el=document.getElementById('history-list');
+  el.innerHTML='<div class="empty-state">Loading...</div>';
+  try{
+    const rows=await sbGet('orders_history',`username=eq.${encodeURIComponent(currentUser)}&order=created_at.desc`);
+    if(!rows.length){el.innerHTML='<div class="empty-state">No order history yet.</div>';return;}
+    el.innerHTML=rows.map((o,i)=>{
+      const count=Object.values(o.items).reduce((a,b)=>a+b,0);
+      const statusHtml=`<span class="order-status status-${o.status}">${o.status==='pending'?'⏳ Pending':o.status==='accepted'?'✅ Accepted':'❌ Refused'}</span>`;
+      const itemRows=Object.entries(o.items).map(([id,q])=>{
+        const p=allProducts.find(x=>x.id==id);
+        return `<div class="history-item"><span>${p?p.emoji:''} ${p?p.name:'#'+id}</span><span>×${q}</span></div>`;
+      }).join('');
+      const reasonHtml=o.admin_message?`<div style="margin-top:8px;padding:8px;background:${o.status==='refused'?'var(--red-light)':'var(--green-light)'};border-radius:6px;font-size:12px;color:${o.status==='refused'?'var(--red)':'#085041'}">Message from Matteo: ${o.admin_message}</div>`:'';
+      return `<div class="history-card">
+        <div class="history-header" onclick="toggleBody('hb-${o.id}')">
+          <span class="history-date">${o.timestamp}</span>
+          ${statusHtml}
+          <span style="font-size:12px;color:var(--text-secondary);margin-left:6px">${count} items</span>
+        </div>
+        <div class="history-body" id="hb-${o.id}">${itemRows}${reasonHtml}</div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="empty-state">Error loading history.</div>';}
+}
+
+// ── ADMIN TABS ──
+function showAdminTab(t,el){
+  ['orders','completed','users','products','trash'].forEach(x=>document.getElementById('tab-'+x).style.display=x===t?'block':'none');
+  // Only highlight main tabs (orders/completed), menu tabs have no tab element
+  if(['orders','completed'].includes(t)){
+    document.querySelectorAll('#admin-tabs .tab').forEach(x=>x.classList.remove('active'));
+    if(el)el.classList.add('active');
+  } else {
+    // Deactivate all main tabs when menu tab is open
+    document.querySelectorAll('#admin-tabs .tab').forEach(x=>x.classList.remove('active'));
+  }
+  if(t==='orders')loadAdminOrders();
+  if(t==='completed')loadCompletedOrders();
+  if(t==='users')loadUsers();
+  if(t==='products')loadAdminProducts();
+  if(t==='trash')loadTrash();
+}
+
+// ── ADMIN: ORDERS ──
+async function loadAdminOrders(){
+  const el=document.getElementById('orders-list');
+  el.innerHTML='<div class="empty-state">Loading...</div>';
+  try{
+    // Exclude soft-deleted and completed orders
+    const rows=await sbGet('orders_history','deleted_at=is.null&status=neq.completed&order=created_at.desc');
+    allOrdersCache=rows;
+    const pending=rows.filter(r=>r.status==='pending').length;
+    const badge=document.getElementById('pending-badge');
+    if(pending>0){badge.style.display='inline';badge.textContent=pending;}else{badge.style.display='none';}
+    renderOrdersList();
+    // Also update completed badge
+    
+  }catch(e){el.innerHTML='<div class="empty-state">Error loading orders.</div>';}
+}
+function filterOrders(f){
+  orderFilter=f;
+  ['all','pending','accepted','refused'].forEach(x=>{
+    const b=document.getElementById('filter-'+x);
+    b.style.fontWeight=x===f?'600':'400';
+    b.style.borderColor=x===f?'var(--green)':'var(--border)';
+  });
+  document.getElementById('select-all-orders').checked=false;
+  renderOrdersList();
+}
+function toggleSelectAllOrders(checked){
+  const list=orderFilter==='all'?allOrdersCache:allOrdersCache.filter(o=>o.status===orderFilter);
+  list.forEach(o=>{
+    const chk=document.getElementById('chk-'+o.id);
+    if(chk)chk.checked=checked;
+  });
+}
+function renderOrdersList(){
+  const el=document.getElementById('orders-list');
+  const list=orderFilter==='all'?allOrdersCache:allOrdersCache.filter(o=>o.status===orderFilter);
+  // Remember which order bodies are currently open
+  const openIds=new Set();
+  document.querySelectorAll('.order-card-body.open').forEach(b=>{
+    const id=b.id.replace('ob-','');
+    openIds.add(id);
+  });
+  if(!list.length){el.innerHTML='<div class="empty-state">No orders found.</div>';return;}
+  el.innerHTML=list.map(o=>{
+    const count=Object.values(o.items).reduce((a,b)=>a+b,0);
+    const statusHtml=`<span class="order-status status-${o.status}">${o.status==='pending'?'⏳ Pending':o.status==='accepted'?'✅ Accepted':'❌ Refused'}</span>`;
+    const itemRows=Object.entries(o.items).map(([id,q])=>{
+      const p=allProducts.find(x=>x.id==id);
+      return `<div class="order-item-row">
+        <span>${p?p.emoji:''} ${p?p.name:'#'+id}${p&&p.description?' ('+p.description+')':''}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="admin-qty-input" type="number" value="${q}" min="0" max="999"
+            onchange="updateOrderItem('${o.id}',${id},this.value)" title="Edit quantity"/>
+          <span style="font-size:11px;color:var(--text-tertiary)">qty</span>
+        </div>
+      </div>`;
+    }).join('');
+    const reasonHtml=o.refuse_reason?`<div style="margin-top:8px;padding:8px;background:var(--red-light);border-radius:6px;font-size:12px;color:var(--red)">Refused: ${o.refuse_reason}</div>`:'';
+    const actionBtns=o.status==='pending'?`
+      <button class="btn-sm green" onclick="openAcceptModal('${o.id}')">✅ Accept</button>
+      <button class="btn-sm red" onclick="openRefuseModal('${o.id}')">❌ Refuse</button>
+      <button class="btn-sm" style="background:#EDE9FE;border-color:#A78BFA;color:#5B21B6;" onclick="completeOrder('${o.id}')">🏁 Complete</button>`
+      :o.status==='accepted'?`
+      <button class="btn-sm" onclick="setOrderStatus('${o.id}','pending')">↩ Revert</button>
+      <button class="btn-sm" style="background:#EDE9FE;border-color:#A78BFA;color:#5B21B6;" onclick="completeOrder('${o.id}')">🏁 Complete</button>`
+      :`<button class="btn-sm" onclick="setOrderStatus('${o.id}','pending')">↩ Revert to pending</button>`;
+    const addItemHtml=`<div class="add-item-row">
+      <select id="add-prod-${o.id}" class="add-item-select">
+        <option value="">+ Add product to this order...</option>
+        ${allProducts.map(p=>`<option value="${p.id}">${p.emoji} ${p.name}${p.description?' ('+p.description+')':''}</option>`).join('')}
+      </select>
+      <input type="number" id="add-qty-${o.id}" class="admin-qty-input" placeholder="qty" min="1" max="999" value="1"/>
+      <button class="btn-sm green" onclick="addItemToOrder('${o.id}')">Add</button>
+    </div>`;
+    return `<div class="order-card ${o.status}" id="ocard-${o.id}">
+      <div class="order-card-header" onclick="toggleBody('ob-${o.id}')">
+        <input type="checkbox" id="chk-${o.id}" onclick="event.stopPropagation()"/>
+        <span class="order-card-user">${o.username} <span style="font-weight:400;color:var(--text-secondary);font-size:12px;">— ${o.timestamp}</span></span>
+        ${statusHtml}
+        <span style="font-size:12px;color:var(--text-secondary)">${count} items</span>
+      </div>
+      <div class="order-card-body${openIds.has(o.id)?' open':''}" id="ob-${o.id}">
+        ${itemRows||'<div style="font-size:12px;color:var(--text-tertiary);padding:6px 0;">No items.</div>'}
+        ${addItemHtml}
+        ${reasonHtml}
+        <div class="order-actions">${actionBtns}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleBody(id){document.getElementById(id).classList.toggle('open');}
+
+async function updateOrderItem(orderId,productId,newVal){
+  const q=parseInt(newVal)||0;
+  const order=allOrdersCache.find(o=>o.id===orderId);
+  if(!order)return;
+  const items={...order.items};
+  if(q<=0)delete items[productId];else items[productId]=q;
+  try{
+    await sbPatch('orders_history',`id=eq.${orderId}`,{items});
+    order.items=items;
+    renderOrdersList();
+  }catch(e){alert('Error updating order.');}
+}
+async function addItemToOrder(orderId){
+  const select=document.getElementById('add-prod-'+orderId);
+  const qtyInput=document.getElementById('add-qty-'+orderId);
+  const productId=parseInt(select.value);
+  const qty=parseInt(qtyInput.value)||1;
+  if(!productId||qty<1)return;
+  const order=allOrdersCache.find(o=>o.id===orderId);
+  if(!order)return;
+  const items={...order.items};
+  items[productId]=(items[productId]||0)+qty;
+  try{
+    await sbPatch('orders_history',`id=eq.${orderId}`,{items});
+    order.items=items;
+    renderOrdersList();
+  }catch(e){alert('Error adding item to order.');}
+}
+function openAcceptModal(id){
+  refusingOrderId=id; // reuse same tracking variable
+  document.getElementById('accept-message').value='';
+  openModal('accept-modal');
+}
+async function confirmAccept(){
+  const msg=document.getElementById('accept-message').value.trim();
+  try{
+    await sbPatch('orders_history',`id=eq.${refusingOrderId}`,{status:'accepted',admin_message:msg||null,message_read:false,refuse_reason:null});
+    closeModal('accept-modal');loadAdminOrders();
+  }catch(e){alert('Error accepting order.');}
+}
+function openRefuseModal(id){
+  refusingOrderId=id;
+  document.getElementById('refuse-reason').value='';
+  openModal('refuse-modal');
+}
+async function confirmRefuse(){
+  const reason=document.getElementById('refuse-reason').value.trim();
+  try{
+    await sbPatch('orders_history',`id=eq.${refusingOrderId}`,{status:'refused',refuse_reason:reason||null,admin_message:reason||null,message_read:false});
+    closeModal('refuse-modal');loadAdminOrders();
+  }catch(e){alert('Error refusing order.');}
+}
+async function setOrderStatus(id,status){
+  try{await sbPatch('orders_history',`id=eq.${id}`,{status,refuse_reason:null,admin_message:null,message_read:true});loadAdminOrders();}
+  catch(e){alert('Error updating order.');}
+}
+
+// ── CLEAR ALL (with password) ──
+async function mergeSelectedOrders(){
+  // Get selected order IDs
+  const selected=allOrdersCache.filter(o=>{
+    const chk=document.getElementById('chk-'+o.id);
+    return chk&&chk.checked;
+  });
+
+  if(selected.length<2){
+    alert('Please select at least 2 orders to merge.');return;
+  }
+
+  // Validate: all must be from the same client
+  const usernames=[...new Set(selected.map(o=>o.username))];
+  if(usernames.length>1){
+    alert(`Cannot merge orders from different clients.\n\nSelected orders belong to: ${usernames.join(', ')}\n\nPlease select orders from the same client only.`);return;
+  }
+
+  const username=usernames[0];
+  if(!confirm(`Merge ${selected.length} orders from "${username}" into one?\n\nQuantities will be summed. All other orders will be deleted. This cannot be undone.`))return;
+
+  // Merge items: sum quantities
+  const mergedItems={};
+  selected.forEach(o=>{
+    Object.entries(o.items).forEach(([id,q])=>{
+      mergedItems[id]=(mergedItems[id]||0)+q;
+    });
+  });
+
+  // Use most recent timestamp
+  const latest=selected.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+  const now=new Date();
+  const ts=now.toLocaleDateString('en-GB')+' '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+  try{
+    // Update the first (most recent) order with merged items
+    await sbPatch('orders_history',`id=eq.${latest.id}`,{items:mergedItems,timestamp:ts});
+
+    // Delete the rest
+    const toDelete=selected.filter(o=>o.id!==latest.id);
+    for(const o of toDelete){
+      await sbDelete('orders_history',`id=eq.${o.id}`);
+    }
+
+    await loadAdminOrders();
+    alert(`✅ ${selected.length} orders from "${username}" merged successfully!`);
+  }catch(e){alert('Error merging orders: '+e.message);}
+}
+
+let ordersToDelete=[];
+function promptDeleteSelected(){
+  // Get selected orders
+  const selected=allOrdersCache.filter(o=>{
+    const chk=document.getElementById('chk-'+o.id);
+    return chk&&chk.checked;
+  });
+  if(!selected.length){
+    alert('Please select at least one order to delete.\n\nUse the checkboxes on each order, or "Select all" to select all.');
+    return;
+  }
+  ordersToDelete=selected;
+  const names=[...new Set(selected.map(o=>o.username))].join(', ');
+  document.getElementById('delete-modal-title').textContent=`🗑 Delete ${selected.length} order${selected.length>1?'s':''}`;
+  document.getElementById('delete-modal-desc').textContent=`This will permanently delete ${selected.length} order${selected.length>1?'s':''} from: ${names}. Enter admin password to confirm.`;
+  document.getElementById('clear-confirm-pass').value='';
+  document.getElementById('clear-confirm-error').style.display='none';
+  openModal('clear-confirm-modal');
+}
+async function confirmDeleteSelected(){
+  const pass=document.getElementById('clear-confirm-pass').value;
+  const err=document.getElementById('clear-confirm-error');
+  if(pass!==ADMIN_PASS){err.textContent='Incorrect password.';err.style.display='block';return;}
+  try{
+    const now=new Date().toISOString();
+    for(const o of ordersToDelete){
+      // Soft delete — move to trash
+      await sbPatch('orders_history',`id=eq.${o.id}`,{deleted_at:now});
+    }
+    ordersToDelete=[];
+    const selectAll=document.getElementById('select-all-orders');
+    if(selectAll)selectAll.checked=false;
+    closeModal('clear-confirm-modal');
+    loadAdminOrders();
+    // Update trash badge
+    loadTrashBadge();
+  }catch(e){alert('Error deleting orders: '+e.message);}
+}
+
+// ── ADMIN: COMPLETED ORDERS ──
+let completedOrdersCache=[];
+async function loadCompletedOrders(){
+  const el=document.getElementById('completed-list');
+  el.innerHTML='<div class="empty-state">Loading...</div>';
+  try{
+    const rows=await sbGet('orders_history','status=eq.completed&deleted_at=is.null&order=created_at.desc');
+    completedOrdersCache=rows;
+    
+    if(!rows.length){el.innerHTML='<div class="empty-state">No completed orders yet.</div>';return;}
+    el.innerHTML=rows.map(o=>{
+      const count=Object.values(o.items).reduce((a,b)=>a+b,0);
+      const itemRows=Object.entries(o.items).map(([id,q])=>{
+        const p=allProducts.find(x=>x.id==id);
+        return `<div class="history-item"><span>${p?p.emoji:''} ${p?p.name:'#'+id}${p&&p.description?' ('+p.description+')':''}</span><span>×${q}</span></div>`;
+      }).join('');
+      return `<div class="order-card accepted">
+        <div class="order-card-header" onclick="toggleBody('cb-${o.id}')">
+          <input type="checkbox" id="cchk-${o.id}" onclick="event.stopPropagation()"/>
+          <span class="order-card-user">${o.username} <span style="font-weight:400;color:var(--text-secondary);font-size:12px;">— ${o.timestamp}</span></span>
+          <span class="order-status status-accepted">🏁 Completed</span>
+          <span style="font-size:12px;color:var(--text-secondary)">${count} items</span>
+        </div>
+        <div class="order-card-body" id="cb-${o.id}">
+          ${itemRows}
+          <div class="order-actions">
+            <button class="btn-sm" onclick="reactivateOrder('${o.id}')">↩ Move back to New Orders</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="empty-state">Error loading completed orders.</div>';}
+}
+function loadCompletedBadge(count){
+  if(count===undefined){
+    sbGet('orders_history','status=eq.completed&deleted_at=is.null').then(rows=>{
+      const badge=document.getElementById('completed-badge');
+      if(rows.length>0){badge.style.display='inline';badge.textContent=rows.length;}
+      else{badge.style.display='none';}
+    }).catch(()=>{});
+    return;
+  }
+  const badge=document.getElementById('completed-badge');
+  if(count>0){badge.style.display='inline';badge.textContent=count;}
+  else{badge.style.display='none';}
+}
+async function completeOrder(id){
+  try{
+    await sbPatch('orders_history',`id=eq.${id}`,{status:'completed'});
+    loadAdminOrders();
+    
+  }catch(e){alert('Error completing order: '+e.message);}
+}
+async function completeSelectedOrders(){
+  const selected=allOrdersCache.filter(o=>{
+    const chk=document.getElementById('chk-'+o.id);
+    return chk&&chk.checked;
+  });
+  if(!selected.length){alert('Please select at least one order to complete.');return;}
+  if(!confirm(`Mark ${selected.length} order${selected.length>1?'s':''} as completed?`))return;
+  try{
+    for(const o of selected){
+      await sbPatch('orders_history',`id=eq.${o.id}`,{status:'completed'});
+    }
+    document.getElementById('select-all-orders').checked=false;
+    loadAdminOrders();
+    
+  }catch(e){alert('Error completing orders: '+e.message);}
+}
+async function reactivateOrder(id){
+  if(!confirm('Move this order back to New Orders?'))return;
+  try{
+    await sbPatch('orders_history',`id=eq.${id}`,{status:'accepted'});
+    loadCompletedOrders();
+    loadAdminOrders();
+  }catch(e){alert('Error reactivating order: '+e.message);}
+}
+function toggleSelectAllCompleted(checked){
+  completedOrdersCache.forEach(o=>{
+    const chk=document.getElementById('cchk-'+o.id);
+    if(chk)chk.checked=checked;
+  });
+}
+async function promptDeleteCompleted(){
+  const selected=completedOrdersCache.filter(o=>{
+    const chk=document.getElementById('cchk-'+o.id);
+    return chk&&chk.checked;
+  });
+  if(!selected.length){alert('Please select at least one order to delete.');return;}
+  ordersToDelete=selected;
+  const names=[...new Set(selected.map(o=>o.username))].join(', ');
+  document.getElementById('delete-modal-title').textContent=`🗑 Delete ${selected.length} completed order${selected.length>1?'s':''}`;
+  document.getElementById('delete-modal-desc').textContent=`Move ${selected.length} order${selected.length>1?'s':''} from ${names} to trash? Enter admin password to confirm.`;
+  document.getElementById('clear-confirm-pass').value='';
+  document.getElementById('clear-confirm-error').style.display='none';
+  openModal('clear-confirm-modal');
+}
+async function exportCompletedExcel(){
+  if(!completedOrdersCache.length){alert('No completed orders to export. Make sure the Completed tab is loaded first.');return;}
+  const checked=completedOrdersCache.filter(o=>{const c=document.getElementById('cchk-'+o.id);return c&&c.checked;});
+  const orders=checked.length>0?checked:completedOrdersCache;
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='⏳ Generating...';}
+  try{
+    const payload={
+      orders:orders.map(o=>({username:o.username,items:o.items})),
+      products:allProducts.map(p=>({id:p.id,name:p.name,description:p.description||'',cat:p.cat}))
+    };
+    const res=await fetch('/.netlify/functions/generate-excel',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+    });
+    if(!res.ok){const err=await res.json();throw new Error(err.error||'Server error');}
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const date=new Date().toLocaleDateString('en-GB').replace(/\//g,'-');
+    const a=document.createElement('a');
+    a.href=url;a.download=`matteo-completed-${date}.xlsx`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  }catch(e){alert('Error generating Excel: '+e.message);}
+  if(btn){btn.disabled=false;btn.textContent='⬇ Excel';}
+}
+
+// ── ADMIN: TRASH ──
+let trashedOrdersCache=[];
+async function loadTrash(){
+  const el=document.getElementById('trash-list');
+  el.innerHTML='<div class="empty-state">Loading...</div>';
+  try{
+    const rows=await sbGet('orders_history','deleted_at=not.is.null&order=deleted_at.desc');
+    trashedOrdersCache=rows;
+    loadTrashBadge(rows.length);
+    if(!rows.length){el.innerHTML='<div class="empty-state">Trash is empty.</div>';return;}
+    el.innerHTML=rows.map(o=>{
+      const count=Object.values(o.items).reduce((a,b)=>a+b,0);
+      const deletedDate=new Date(o.deleted_at).toLocaleDateString('en-GB')+' '+new Date(o.deleted_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      const itemRows=Object.entries(o.items).map(([id,q])=>{
+        const p=allProducts.find(x=>x.id==id);
+        return `<div class="history-item"><span>${p?p.emoji:''} ${p?p.name:'#'+id}</span><span>×${q}</span></div>`;
+      }).join('');
+      return `<div class="order-card refused" style="opacity:.85;">
+        <div class="order-card-header" onclick="toggleBody('tb-${o.id}')">
+          <input type="checkbox" id="tchk-${o.id}" onclick="event.stopPropagation()"/>
+          <span class="order-card-user">${o.username} <span style="font-weight:400;color:var(--text-secondary);font-size:12px;">— ${o.timestamp}</span></span>
+          <span style="font-size:11px;color:var(--text-tertiary)">Deleted: ${deletedDate}</span>
+          <span class="order-card-count" style="background:#FEE2E2;color:#991B1B;">${count} items</span>
+        </div>
+        <div class="order-card-body" id="tb-${o.id}">${itemRows}</div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="empty-state">Error loading trash.</div>';}
+}
+function loadTrashBadge(count){
+  const badge=document.getElementById('trash-badge');
+  if(!badge)return;
+  if(count===undefined){
+    sbGet('orders_history','deleted_at=not.is.null').then(rows=>{
+      if(rows.length>0){badge.style.display='inline-flex';badge.textContent=rows.length;}
+      else{badge.style.display='none';}
+    }).catch(()=>{});
+    return;
+  }
+  if(count>0){badge.style.display='inline-flex';badge.textContent=count;}
+  else{badge.style.display='none';}
+}
+async function restoreSelectedOrders(){
+  const selected=trashedOrdersCache.filter(o=>{
+    const chk=document.getElementById('tchk-'+o.id);
+    return chk&&chk.checked;
+  });
+  if(!selected.length){alert('Please select at least one order to restore.');return;}
+  if(!confirm(`Restore ${selected.length} order${selected.length>1?'s':''} back to active orders?`))return;
+  try{
+    for(const o of selected){
+      await sbPatch('orders_history',`id=eq.${o.id}`,{deleted_at:null});
+    }
+    loadTrash();
+    loadTrashBadge();
+  }catch(e){alert('Error restoring orders: '+e.message);}
+}
+async function permanentlyDeleteSelected(){
+  const selected=trashedOrdersCache.filter(o=>{
+    const chk=document.getElementById('tchk-'+o.id);
+    return chk&&chk.checked;
+  });
+  if(!selected.length){alert('Please select at least one order to permanently delete.');return;}
+  if(!confirm(`⚠️ Permanently delete ${selected.length} order${selected.length>1?'s':''}?\n\nThis CANNOT be undone.`))return;
+  try{
+    for(const o of selected){
+      await sbDelete('orders_history',`id=eq.${o.id}`);
+    }
+    loadTrash();
+  }catch(e){alert('Error deleting orders: '+e.message);}
+}
+
+// ── ADMIN: USERS ──
+async function loadUsers(){
+  const el=document.getElementById('user-table');
+  el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text-secondary)">Loading...</div>';
+  try{
+    const rows=await sbGet('users','order=created_at.asc');
+    el.innerHTML=`<div class="user-row header"><span>Username</span><span>Password</span><span>Change PW</span><span>Remove</span></div>`+
+      rows.map(u=>`<div class="user-row">
+        <span>${u.username}</span>
+        <span style="font-family:monospace">${u.password}</span>
+        <button class="btn-sm" onclick="openEditUser('${u.username}','${u.auth_user_id||''}')">✏️ Edit</button>
+        <button class="btn-danger" onclick="deleteUser('${u.username}','${u.auth_user_id||''}')">Remove</button>
+      </div>`).join('');
+  }catch(e){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--red)">Error loading users.</div>';}
+}
+async function deleteUser(username,authUserId){
+  if(!confirm(`Remove user "${username}"?`))return;
+  try{
+    const res=await workerCall('/delete-user',{username,auth_user_id:authUserId});
+    if(res.error){alert('Error: '+res.error);return;}
+    loadUsers();
+  }catch(e){alert('Error removing user: '+e.message);}
+}
+function openAddUser(){
+  document.getElementById('new-username').value='';document.getElementById('new-password').value='';
+  document.getElementById('add-user-error').style.display='none';
+  openModal('add-user-modal');setTimeout(()=>document.getElementById('new-username').focus(),100);
+}
+async function addUser(){
+  const u=document.getElementById('new-username').value.trim().toLowerCase();
+  const p=document.getElementById('new-password').value.trim();
+  const err=document.getElementById('add-user-error');
+  if(!u||!p){err.textContent='Both fields are required.';err.style.display='block';return;}
+  if(u===ADMIN_USERNAME){err.textContent='That username is reserved.';err.style.display='block';return;}
+  err.style.display='none';
+  try{
+    const res=await workerCall('/create-user',{username:u,password:p});
+    if(res.error){err.textContent='Error: '+res.error;err.style.display='block';return;}
+    closeModal('add-user-modal');loadUsers();
+  }catch(e){err.textContent='Error creating user: '+e.message;err.style.display='block';}
+}
+function openEditUser(username,authUserId){
+  editingUserId=authUserId;
+  editingUsername=username;
+  document.getElementById('edit-user-label').textContent=`Changing password for: ${username}`;
+  document.getElementById('edit-password').value='';
+  document.getElementById('edit-user-error').style.display='none';
+  openModal('edit-user-modal');setTimeout(()=>document.getElementById('edit-password').focus(),100);
+}
+async function saveUserPassword(){
+  const p=document.getElementById('edit-password').value.trim();
+  const err=document.getElementById('edit-user-error');
+  if(!p){err.textContent='Password cannot be empty.';err.style.display='block';return;}
+  if(!editingUserId){err.textContent='Missing user reference. Cannot update.';err.style.display='block';return;}
+  try{
+    const res=await workerCall('/change-password',{username:editingUsername,auth_user_id:editingUserId,new_password:p});
+    if(res.error){err.textContent='Error: '+res.error;err.style.display='block';return;}
+    closeModal('edit-user-modal');loadUsers();
+  }catch(e){err.textContent='Error saving password: '+e.message;err.style.display='block';}
+}
+
+// ── ADMIN: PRODUCTS ──
+async function loadAdminProducts(){
+  const el=document.getElementById('prod-table');
+  el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text-secondary)">Loading...</div>';
+  try{
+    const rows=await sbGet('products','order=cat.asc,name.asc');
+    document.getElementById('admin-cat-row').innerHTML=CATEGORIES.map(c=>
+      `<button class="cat-btn${adminProdCat===c.id?' active':''}" onclick="filterAdminProdCat('${c.id}',this)">${c.label}</button>`
+    ).join('');
+    const list=adminProdCat==='all'?rows:rows.filter(p=>p.cat===adminProdCat);
+    if(!list.length){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text-secondary);text-align:center">No products in this category.</div>';return;}
+    el.innerHTML=`<div class="prod-row header"><span>Emoji</span><span>Name / Description</span><span>Category</span><span>Status</span><span>Stock</span><span>Actions</span></div>`+
+      list.map(p=>`<div class="prod-row${p.active?'':' inactive-row'}">
+        <span style="font-size:20px">${p.image_url?`<img src="${p.image_url}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;vertical-align:middle;" onerror="this.outerHTML='${p.emoji}'"/>`:p.emoji}</span>
+        <span><div style="font-weight:500">${p.name}</div>${p.description?`<div style="font-size:11px;color:var(--text-secondary)">${p.description}</div>`:''}</span>
+        <span style="font-size:12px;color:var(--text-secondary)">${p.cat}</span>
+        <span><button class="toggle-btn${p.active?' on':''}" onclick="toggleProduct(${p.id},${p.active})">${p.active?'✅ Active':'⛔ Hidden'}</button></span>
+        <span><button class="toggle-btn${!p.out_of_stock?' on':''}" onclick="toggleOutOfStock(${p.id},${!!p.out_of_stock})">${p.out_of_stock?'🚫 Out of stock':'✅ In stock'}</button></span>
+        <span class="prod-actions">
+          <button class="btn-sm" onclick="openEditProduct(${p.id})">✏️</button>
+          <button class="btn-sm red" onclick="deleteProduct(${p.id})">🗑</button>
+        </span>
+      </div>`).join('');
+  }catch(e){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--red)">Error loading products.</div>';}
+}
+function filterAdminProdCat(cat,btn){adminProdCat=cat;document.querySelectorAll('#admin-cat-row .cat-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadAdminProducts();}
+// ── EMOJI PICKER ──
+const EMOJI_CATEGORIES = {
+  '😀 Smileys': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','🫠','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🫡','🤭','🫢','🫣','🤫','🤔','🫤','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫥','😟','🙁','☹️','😮','😯','😲','😳','🥺','🫹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
+  '👋 People': ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','💋','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵','🙍','🙎','🙅','🙆','💁','🙋','🧏','🙇','🤦','🤷'],
+  '🐶 Animals': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🦆','🐧','🐦','🐤','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪲','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🦭','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'],
+  '🍎 Food': ['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🧄','🧅','🥔','🍠','🫚','🫛','🌽','🥕','🧇','🥞','🧈','🍳','🥚','🧀','🍖','🍗','🥩','🥓','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥮','🍢','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🧃','🥤','🧋','🍵','☕','🫖','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾'],
+  '⚽ Sports': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🥍','🏑','🪃','🏏','🪁','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤼','🤸','⛹️','🤺','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎵','🎶','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩'],
+  '🚗 Transport': ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🦽','🦼','🛺','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','⛽','🛞','🚨','🚥','🚦','🛑','🚧','⚓','🛟','⛵','🛶','🚤','🛳️','⛴️','🛥️','🚢','✈️','🛩️','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡','🛰️','🚀','🛸','🌍','🌎','🌏'],
+  '🌲 Nature': ['🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁','🍄','🐚','🪸','🪨','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','🌌','☁️','⛅','🌤️','🌥️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','💧','💦','🫧','☔','☂️','🌊','🌀','🌈','🌂','⛱️'],
+  '🏠 Objects': ['📦','🧳','🌂','☂️','🧵','🪡','🧶','👓','🕶️','🥽','🌂','☂️','🧣','🧤','🧥','👒','🎩','🧢','⛑️','📿','💄','💍','💎','🔇','🔈','🔉','🔊','📢','📣','🔔','🔕','🎵','🎶','📻','🎷','🎸','🎹','🎺','🎻','🥁','📱','📲','☎️','📞','📟','📠','🔋','🔌','💻','🖥️','🖨️','⌨️','🖱️','🖲️','💾','💿','📀','📷','📸','📹','🎥','📽️','🎞️','📞','📟','📺','📻','🧭','⏱️','⌚','⏰','⌛','⏳','📡','🔭','🔬','🩺','🩻','🩹','💊','🩸','🧬','🦠','🧫','🧪','🌡️','🧲','💡','🔦','🕯️','🪔','🧱','💰','💴','💵','💶','💷','💸','💳','🪙','💹','📈','📉','📊','📋','📁','📂','🗂️','📅','📆','🗒️','📇','📌','📍','🗺️','📝','✏️','🖊️','🖋️','🖌️','📏','📐','✂️','🗃️','🗄️','🗑️','🔒','🔓','🔏','🔐','🔑','🗝️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🔧','🪛','🔩','⚙️','🗜️','🪤','🧲','🪜','🧰','🪣','🧲','💈','⚗️','🔭','🔬','🩻','🩹','🩺','🚪','🛏️','🛋️','🪑','🚿','🛁','🪠','🚽','🪤','🧴','🧷','🧹','🧺','🧻','🧼','🫧','🪥','🧽','🧯','🛒','🚪'],
+  '❤️ Symbols': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🪯','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈹','🚺','🚹','🚼','⚧️','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔷','🔶','🔹','🔸','🔲','🔳','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈'],
+};
+
+let emojiPickerOpen=false;
+let emojiActiveCat=Object.keys(EMOJI_CATEGORIES)[0];
+
+function toggleEmojiPicker(){
+  const picker=document.getElementById('emoji-picker');
+  emojiPickerOpen=!emojiPickerOpen;
+  picker.style.display=emojiPickerOpen?'flex':'none';
+  if(emojiPickerOpen){
+    renderEmojiCategories();
+    renderEmojiGrid(EMOJI_CATEGORIES[emojiActiveCat]);
+    setTimeout(()=>document.getElementById('emoji-search').focus(),100);
+  }
+}
+function renderEmojiCategories(){
+  const el=document.getElementById('emoji-categories');
+  el.innerHTML=Object.keys(EMOJI_CATEGORIES).map(cat=>`
+    <button class="emoji-cat-btn${cat===emojiActiveCat?' active':''}" onclick="selectEmojiCat('${cat}')">${cat.split(' ')[0]}</button>
+  `).join('');
+}
+function selectEmojiCat(cat){
+  emojiActiveCat=cat;
+  document.getElementById('emoji-search').value='';
+  document.getElementById('emoji-categories').style.display='flex';
+  renderEmojiCategories();
+  renderEmojiGrid(EMOJI_CATEGORIES[cat]);
+}
+function renderEmojiGrid(emojis){
+  const el=document.getElementById('emoji-grid');
+  el.innerHTML=emojis.map(e=>`<button class="emoji-btn" onclick="selectEmoji('${e}')" title="${e}">${e}</button>`).join('');
+}
+// Emoji name map for search
+const EMOJI_NAMES = {
+'😀':'grinning face happy smile','😃':'big smile happy','😄':'grin laugh',
+'😁':'beaming happy','😆':'laughing haha','😅':'sweat smile','🤣':'rolling laugh',
+'😂':'tears joy cry laugh','🙂':'slightly smile','😉':'wink','😊':'blush smile',
+'😇':'angel halo','🥰':'hearts love','😍':'heart eyes love','🤩':'star struck amazing',
+'😘':'kiss blow love','😋':'yum delicious','😎':'cool sunglasses','🤔':'thinking hmm',
+'😐':'neutral face','😑':'expressionless','😶':'no mouth silent','😏':'smirk',
+'😒':'unamused','🙄':'eye roll','😬':'grimace','😴':'sleeping tired','😷':'mask sick',
+'🤒':'sick thermometer','🤕':'injured bandage','🤢':'nauseated sick','🤮':'vomit sick',
+'🤧':'sneezing tissue','🥵':'hot feverish','🥶':'cold freezing','😵':'dizzy spiral',
+'🤯':'exploding head mind blown','🤠':'cowboy hat','🥳':'party celebrate',
+'🤓':'nerd glasses','😡':'angry rage red','😠':'angry','🤬':'cursing angry',
+'😈':'devil evil','👿':'angry devil','💀':'skull death dead','👻':'ghost spooky',
+'👋':'wave hello hi hand','👍':'thumbs up good like approve','👎':'thumbs down dislike',
+'✋':'hand stop raised','🤝':'handshake agreement','🙏':'pray thank you hands',
+'💪':'muscle strong flex arm','👀':'eyes look see',
+'❤️':'heart love red','🧡':'orange heart','💛':'yellow heart','💚':'green heart',
+'💙':'blue heart','💜':'purple heart','🖤':'black heart','💔':'broken heart',
+'💕':'two hearts','💯':'100 percent perfect','⭐':'star','🌟':'glowing star',
+'✨':'sparkles magic','🔥':'fire hot flame','💧':'water drop','🌊':'wave ocean water',
+'☀️':'sun sunny','🌙':'moon night','⚡':'lightning bolt electric',
+'❄️':'snowflake cold winter','🌈':'rainbow colorful','🎉':'party celebration tada',
+'🎊':'confetti celebrate','🎁':'gift present','🎂':'birthday cake',
+'🍰':'cake slice dessert','🎄':'christmas tree','🎃':'pumpkin halloween',
+'🎵':'music note','🎶':'music notes','🎸':'guitar music','🎹':'piano keyboard',
+'🎤':'microphone sing','🎧':'headphones music','🎨':'art palette paint',
+'🎭':'theatre drama','🎬':'movie clapper film','🎮':'video game controller',
+'🏆':'trophy winner prize','🥇':'gold medal first','🥈':'silver medal second',
+'🥉':'bronze medal third','⚽':'soccer football ball','🏀':'basketball',
+'🏈':'american football','⚾':'baseball','🎾':'tennis','🏊':'swimming',
+'🚴':'cycling bike','🏋️':'weightlifting gym','🤸':'gymnastics',
+'🐶':'dog puppy','🐱':'cat kitten','🐭':'mouse','🐹':'hamster','🐰':'rabbit bunny',
+'🦊':'fox','🐻':'bear','🐼':'panda','🐨':'koala','🐯':'tiger','🦁':'lion',
+'🐮':'cow','🐷':'pig','🐸':'frog','🐵':'monkey','🦆':'duck','🐧':'penguin',
+'🦋':'butterfly','🐝':'bee honeybee','🦄':'unicorn','🐙':'octopus',
+'🦈':'shark','🐬':'dolphin','🐳':'whale','🦒':'giraffe','🐘':'elephant',
+'🍎':'apple red fruit','🍊':'orange fruit','🍋':'lemon yellow','🍌':'banana fruit',
+'🍉':'watermelon','🍇':'grapes purple','🍓':'strawberry','🍒':'cherry',
+'🍑':'peach','🍍':'pineapple tropical','🥝':'kiwi','🍅':'tomato','🥑':'avocado',
+'🥦':'broccoli vegetable','🥕':'carrot vegetable','🧅':'onion','🧄':'garlic',
+'🌽':'corn maize','🥔':'potato','🍕':'pizza','🍔':'burger hamburger',
+'🍟':'fries chips','🌮':'taco','🌯':'burrito wrap','🥗':'salad',
+'🍝':'pasta spaghetti','🍜':'noodles ramen','🍣':'sushi','🍱':'bento box',
+'🥟':'dumpling','🍳':'fried egg cooking','🧀':'cheese','🥩':'meat steak',
+'🍗':'chicken leg','🍖':'meat bone','🥓':'bacon','🌭':'hot dog sausage',
+'🍩':'donut','🍪':'cookie','🧁':'cupcake','🍫':'chocolate','🍬':'candy',
+'🍭':'lollipop','🍿':'popcorn','☕':'coffee hot','🍵':'tea hot','🍺':'beer',
+'🍷':'wine','🍸':'cocktail martini','🍹':'tropical drink','🥂':'champagne toast',
+'🧃':'juice box','💊':'pill medicine','🩺':'stethoscope doctor',
+'🔬':'microscope science','🔭':'telescope space','💡':'bulb idea light',
+'🔑':'key lock','🔒':'locked secure','🔓':'unlocked open','📦':'box package',
+'📱':'phone mobile','💻':'laptop computer','⌨️':'keyboard typing',
+'🖥️':'desktop computer','🖨️':'printer','📷':'camera photo','📹':'video camera',
+'🎥':'movie camera','📺':'television tv','📻':'radio','⌚':'watch time',
+'📅':'calendar date','📝':'memo note write','✏️':'pencil write','🖊️':'pen write',
+'✂️':'scissors cut','🔧':'wrench tool','🪛':'screwdriver tool','🔨':'hammer tool',
+'⚙️':'gear settings cog','🧲':'magnet','💰':'money bag cash','💵':'dollar money',
+'💳':'credit card','📈':'chart up growth','📉':'chart down loss','📊':'bar chart',
+'🚗':'car vehicle red','🚕':'taxi cab yellow','🚌':'bus transport','🏎️':'racing car',
+'🚓':'police car','🚑':'ambulance medical','🚒':'fire truck',
+'✈️':'airplane flight travel','🚀':'rocket space launch','🛸':'ufo flying saucer',
+'🚁':'helicopter','⚓':'anchor ship','🌍':'earth globe europe','🌎':'earth americas',
+'🌏':'earth globe asia','🌵':'cactus desert','🌲':'tree forest',
+'🌴':'palm tree tropical','🌺':'hibiscus flower','🌸':'cherry blossom',
+'🌼':'blossom flower yellow','🌻':'sunflower','🌹':'rose red flower',
+'💐':'bouquet flowers','🍀':'four leaf clover luck','☘️':'shamrock ireland',
+'🏠':'house home','🏡':'house garden home','🏢':'office building',
+'🏥':'hospital medical','🏦':'bank','🏨':'hotel','🏪':'store shop',
+'🏔️':'mountain snow','🌋':'volcano','🏖️':'beach holiday','🏝️':'island tropical'
+};
+
+function filterEmojis(query){
+  const q=query.trim().toLowerCase();
+  if(!q){
+    // Restore category view
+    document.getElementById('emoji-categories').style.display='flex';
+    renderEmojiGrid(EMOJI_CATEGORIES[emojiActiveCat]);
+    return;
+  }
+  // Hide category bar during search
+  document.getElementById('emoji-categories').style.display='none';
+  // Search all emojis by name
+  const all=Object.values(EMOJI_CATEGORIES).flat();
+  const results=all.filter(e=>{
+    const name=EMOJI_NAMES[e]||'';
+    return name.includes(q)||e.includes(q);
+  });
+  if(results.length===0){
+    document.getElementById('emoji-grid').innerHTML=`<div style="grid-column:1/-1;padding:12px;font-size:13px;color:var(--text-secondary);text-align:center;">No emojis found for "${query}"</div>`;
+  } else {
+    renderEmojiGrid(results);
+  }
+}
+function selectEmoji(emoji){
+  document.getElementById('prod-emoji').value=emoji;
+  document.getElementById('emoji-preview').textContent=emoji;
+  emojiPickerOpen=false;
+  document.getElementById('emoji-picker').style.display='none';
+}
+
+// ── IMAGE TOGGLE HELPERS ──
+let useImageMode=false;
+let currentImageUrl=null; // existing image URL when editing
+
+function switchToEmoji(){
+  useImageMode=false;
+  document.getElementById('emoji-field').style.display='block';
+  document.getElementById('image-field').style.display='none';
+  document.getElementById('use-emoji-btn').style.cssText='flex:1;border-color:var(--green);background:var(--green-light);color:var(--green-dark);';
+  document.getElementById('use-image-btn').style.cssText='flex:1;';
+}
+function switchToImage(){
+  useImageMode=true;
+  document.getElementById('emoji-field').style.display='none';
+  document.getElementById('image-field').style.display='block';
+  document.getElementById('use-image-btn').style.cssText='flex:1;border-color:var(--green);background:var(--green-light);color:var(--green-dark);';
+  document.getElementById('use-emoji-btn').style.cssText='flex:1;';
+}
+function previewProductImage(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('prod-img-preview-el').src=e.target.result;
+    document.getElementById('prod-image-preview').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+function clearProductImage(){
+  document.getElementById('prod-image-file').value='';
+  document.getElementById('prod-image-preview').style.display='none';
+  document.getElementById('prod-img-preview-el').src='';
+  currentImageUrl=null;
+}
+
+function openAddProduct(){
+  editingProductId=null;useImageMode=false;currentImageUrl=null;
+  document.getElementById('product-modal-title').textContent='Add product';
+  document.getElementById('prod-emoji').value='📦';
+  document.getElementById('emoji-preview').textContent='📦';
+  document.getElementById('prod-name').value='';
+  document.getElementById('prod-description').value='';document.getElementById('prod-cat').value='sauces';
+  document.getElementById('add-product-error').style.display='none';
+  document.getElementById('prod-image-preview').style.display='none';
+  document.getElementById('prod-image-file').value='';
+  document.getElementById('emoji-picker').style.display='none';
+  emojiPickerOpen=false;
+  switchToEmoji();
+  openModal('add-product-modal');setTimeout(()=>document.getElementById('prod-name').focus(),100);
+}
+async function openEditProduct(id){
+  try{
+    const rows=await sbGet('products',`id=eq.${id}`);if(!rows.length)return;const p=rows[0];
+    editingProductId=id;currentImageUrl=p.image_url||null;
+    document.getElementById('product-modal-title').textContent='Edit product';
+    document.getElementById('prod-name').value=p.name;
+    document.getElementById('prod-description').value=p.description||'';
+    document.getElementById('prod-cat').value=p.cat;
+    document.getElementById('add-product-error').style.display='none';
+    document.getElementById('prod-image-file').value='';
+    // Show existing image or emoji
+    if(p.image_url){
+      switchToImage();
+      document.getElementById('prod-img-preview-el').src=p.image_url;
+      document.getElementById('prod-image-preview').style.display='block';
+    } else {
+      switchToEmoji();
+      document.getElementById('prod-emoji').value=p.emoji||'📦';
+      document.getElementById('emoji-preview').textContent=p.emoji||'📦';
+      document.getElementById('emoji-picker').style.display='none';
+      emojiPickerOpen=false;
+      document.getElementById('prod-image-preview').style.display='none';
+    }
+    openModal('add-product-modal');
+  }catch(e){alert('Error loading product.');}
+}
+async function saveProduct(){
+  const name=document.getElementById('prod-name').value.trim();
+  const description=document.getElementById('prod-description').value.trim();
+  const cat=document.getElementById('prod-cat').value;
+  const err=document.getElementById('add-product-error');
+  if(!name){err.textContent='Name is required.';err.style.display='block';return;}
+
+  let emoji='📦';
+  let image_url=currentImageUrl||null;
+
+  // Handle image upload
+  if(useImageMode){
+    const fileInput=document.getElementById('prod-image-file');
+    const file=fileInput.files[0];
+    if(file){
+      try{
+        const ext=file.name.split('.').pop();
+        const filename=`product-${Date.now()}.${ext}`;
+        const {data,error}=await sbClient.storage.from('product-images').upload(filename,file,{upsert:true});
+        if(error)throw error;
+        const {data:urlData}=sbClient.storage.from('product-images').getPublicUrl(filename);
+        image_url=urlData.publicUrl;
+        emoji='🖼️'; // placeholder emoji when image is used
+      }catch(uploadErr){
+        err.textContent='Error uploading image: '+uploadErr.message;err.style.display='block';return;
+      }
+    }
+  } else {
+    emoji=document.getElementById('prod-emoji').value.trim()||'📦';
+    image_url=null; // switching back to emoji clears image
+  }
+
+  try{
+    const payload={emoji,name,description,cat,image_url};
+    if(editingProductId)await sbPatch('products',`id=eq.${editingProductId}`,payload);
+    else await sbPost('products',{...payload,active:true});
+    closeModal('add-product-modal');
+    allProducts=await sbGet('products','active=eq.true&order=cat.asc,name.asc');
+    loadAdminProducts();
+  }catch(e){err.textContent='Error saving product.';err.style.display='block';}
+}
+async function toggleProduct(id,current){
+  try{await sbPatch('products',`id=eq.${id}`,{active:!current});allProducts=await sbGet('products','active=eq.true&order=cat.asc,name.asc');loadAdminProducts();}
+  catch(e){alert('Error updating product.');}
+}
+async function toggleOutOfStock(id,current){
+  try{await sbPatch('products',`id=eq.${id}`,{out_of_stock:!current});allProducts=await sbGet('products','active=eq.true&order=cat.asc,name.asc');loadAdminProducts();}
+  catch(e){alert('Error updating stock status.');}
+}
+async function deleteProduct(id){
+  if(!confirm('Delete this product permanently?'))return;
+  try{await sbDelete('products',`id=eq.${id}`);allProducts=await sbGet('products','active=eq.true&order=cat.asc,name.asc');loadAdminProducts();}
+  catch(e){alert('Error deleting product.');}
+}
+
+// ── EXPORT: Formatted Excel via Netlify Function ──
+function buildOrdersForExport(){
+  let orders=allOrdersCache.filter(o=>o.status!=='refused');
+  if(!orders.length)return null;
+  const checked=orders.filter(o=>{const c=document.getElementById('chk-'+o.id);return c&&c.checked;});
+  if(checked.length>0)orders=checked;
+  return orders;
+}
+
+async function exportExcel(){
+  const orders=buildOrdersForExport();
+  if(!orders){alert('No accepted/pending orders to export.');return;}
+
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='⏳ Generating...';}
+
+  try{
+    const payload={
+      orders:orders.map(o=>({username:o.username,items:o.items})),
+      products:allProducts.map(p=>({id:p.id,name:p.name,description:p.description||'',cat:p.cat}))
+    };
+
+    const res=await fetch('/.netlify/functions/generate-excel',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    if(!res.ok){
+      const text=await res.text();
+      let msg='Server error '+res.status;
+      try{msg=JSON.parse(text).error||msg;}catch(e){msg=text||msg;}
+      throw new Error(msg);
+    }
+
+    const contentType=res.headers.get('content-type')||'';
+    if(!contentType.includes('spreadsheet')&&!contentType.includes('octet')){
+      const text=await res.text();
+      throw new Error('Unexpected response: '+text.substring(0,200));
+    }
+
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const date=new Date().toLocaleDateString('en-GB').replace(/\//g,'-');
+    const a=document.createElement('a');
+    a.href=url;a.download=`matteo-orders-${date}.xlsx`;
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+
+  }catch(e){
+    alert('Error generating Excel: '+e.message);
+  }
+
+  if(btn){btn.disabled=false;btn.textContent='⬇ Excel';}
+}
+
+// Export to Google Sheets: download formatted Excel then open Drive
+function exportToGoogleSheets(){
+  exportExcel();
+  setTimeout(()=>{
+    if(confirm('✅ Excel file downloaded!\n\nTo open in Google Sheets:\n1. Go to drive.google.com\n2. Click "+ New" → "File upload"\n3. Select the downloaded Excel file\n4. Google will open it as a Sheet\n\nClick OK to open Google Drive now.')){
+      window.open('https://drive.google.com','_blank');
+    }
+  }, 1500);
+}
+
+// ── MODAL HELPERS ──
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+
+// ── INIT ──
+updateBanner();setInterval(updateBanner,60000);init();
+</script>
+</body>
+</html>
